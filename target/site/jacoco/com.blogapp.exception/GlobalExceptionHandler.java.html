@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GlobalExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">blog-app</a> &gt; <a href="index.source.html" class="el_package">com.blogapp.exception</a> &gt; <span class="el_source">GlobalExceptionHandler.java</span></div><h1>GlobalExceptionHandler.java</h1><pre class="source lang-java linenums">package com.blogapp.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
+@RestControllerAdvice
+<span class="fc" id="L15">public class GlobalExceptionHandler {</span>
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity&lt;ErrorResponse&gt; handleResourceNotFound(ResourceNotFoundException ex) {
+<span class="nc" id="L19">        ErrorResponse error = new ErrorResponse(</span>
+<span class="nc" id="L20">            HttpStatus.NOT_FOUND.value(),</span>
+<span class="nc" id="L21">            ex.getMessage(),</span>
+<span class="nc" id="L22">            LocalDateTime.now()</span>
+        );
+<span class="nc" id="L24">        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);</span>
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleValidationErrors(MethodArgumentNotValidException ex) {
+<span class="nc" id="L29">        Map&lt;String, String&gt; errors = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L30">        ex.getBindingResult().getAllErrors().forEach(error -&gt; {</span>
+<span class="nc" id="L31">            String fieldName = ((FieldError) error).getField();</span>
+<span class="nc" id="L32">            String errorMessage = error.getDefaultMessage();</span>
+<span class="nc" id="L33">            errors.put(fieldName, errorMessage);</span>
+<span class="nc" id="L34">        });</span>
+<span class="nc" id="L35">        return ResponseEntity.badRequest().body(errors);</span>
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity&lt;ErrorResponse&gt; handleGenericException(Exception ex) {
+<span class="nc" id="L40">        ErrorResponse error = new ErrorResponse(</span>
+<span class="nc" id="L41">            HttpStatus.INTERNAL_SERVER_ERROR.value(),</span>
+            &quot;An unexpected error occurred&quot;,
+<span class="nc" id="L43">            LocalDateTime.now()</span>
+        );
+<span class="nc" id="L45">        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);</span>
+    }
+
+<span class="nc" id="L48">    public record ErrorResponse(int status, String message, LocalDateTime timestamp) {}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

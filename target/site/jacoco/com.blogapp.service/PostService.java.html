@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PostService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">blog-app</a> &gt; <a href="index.source.html" class="el_package">com.blogapp.service</a> &gt; <span class="el_source">PostService.java</span></div><h1>PostService.java</h1><pre class="source lang-java linenums">package com.blogapp.service;
+
+import com.blogapp.dto.PostDto;
+import com.blogapp.exception.ResourceNotFoundException;
+import com.blogapp.model.Category;
+import com.blogapp.model.Post;
+import com.blogapp.model.Post.PostStatus;
+import com.blogapp.repository.CategoryRepository;
+import com.blogapp.repository.PostRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+<span class="fc" id="L22">@RequiredArgsConstructor</span>
+@Transactional
+public class PostService {
+
+    private final PostRepository postRepository;
+    private final CategoryRepository categoryRepository;
+
+    public PostDto.Response createPost(PostDto.Request request) {
+<span class="fc" id="L30">        String author = SecurityContextHolder.getContext().getAuthentication().getName();</span>
+
+<span class="fc" id="L32">        Category category = null;</span>
+<span class="pc bpc" id="L33" title="1 of 2 branches missed.">        if (request.getCategoryId() != null) {</span>
+<span class="nc" id="L34">            category = categoryRepository.findById(request.getCategoryId())</span>
+<span class="nc" id="L35">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Category&quot;, &quot;id&quot;, request.getCategoryId()));</span>
+        }
+
+<span class="fc" id="L38">        Post post = Post.builder()</span>
+<span class="fc" id="L39">            .title(request.getTitle())</span>
+<span class="fc" id="L40">            .content(request.getContent())</span>
+<span class="fc" id="L41">            .summary(request.getSummary())</span>
+<span class="fc" id="L42">            .author(author)</span>
+<span class="pc bpc" id="L43" title="1 of 2 branches missed.">            .status(request.getStatus() != null ? request.getStatus() : PostStatus.DRAFT)</span>
+<span class="fc" id="L44">            .category(category)</span>
+<span class="fc" id="L45">            .build();</span>
+
+<span class="fc" id="L47">        Post saved = postRepository.save(post);</span>
+<span class="fc" id="L48">        return toResponse(saved);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Page&lt;PostDto.Summary&gt; getAllPosts(int page, int size, String sortBy) {
+<span class="fc" id="L53">        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());</span>
+<span class="fc" id="L54">        return postRepository.findAll(pageable).map(this::toSummary);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Page&lt;PostDto.Summary&gt; getPublishedPosts(int page, int size) {
+<span class="nc" id="L59">        Pageable pageable = PageRequest.of(page, size, Sort.by(&quot;createdAt&quot;).descending());</span>
+<span class="nc" id="L60">        return postRepository.findByStatus(PostStatus.PUBLISHED, pageable).map(this::toSummary);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public PostDto.Response getPostById(Long id) {
+<span class="fc" id="L65">        Post post = postRepository.findById(id)</span>
+<span class="fc" id="L66">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Post&quot;, &quot;id&quot;, id));</span>
+<span class="fc" id="L67">        return toResponse(post);</span>
+    }
+
+    public PostDto.Response updatePost(Long id, PostDto.Request request) {
+<span class="nc" id="L71">        Post post = postRepository.findById(id)</span>
+<span class="nc" id="L72">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Post&quot;, &quot;id&quot;, id));</span>
+
+<span class="nc" id="L74">        post.setTitle(request.getTitle());</span>
+<span class="nc" id="L75">        post.setContent(request.getContent());</span>
+<span class="nc" id="L76">        post.setSummary(request.getSummary());</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">        if (request.getStatus() != null) post.setStatus(request.getStatus());</span>
+
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (request.getCategoryId() != null) {</span>
+<span class="nc" id="L80">            Category category = categoryRepository.findById(request.getCategoryId())</span>
+<span class="nc" id="L81">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Category&quot;, &quot;id&quot;, request.getCategoryId()));</span>
+<span class="nc" id="L82">            post.setCategory(category);</span>
+        }
+
+<span class="nc" id="L85">        return toResponse(postRepository.save(post));</span>
+    }
+
+    public void deletePost(Long id) {
+<span class="fc" id="L89">        Post post = postRepository.findById(id)</span>
+<span class="pc" id="L90">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Post&quot;, &quot;id&quot;, id));</span>
+<span class="fc" id="L91">        postRepository.delete(post);</span>
+<span class="fc" id="L92">    }</span>
+
+    @Transactional(readOnly = true)
+    public Page&lt;PostDto.Summary&gt; searchPosts(String keyword, int page, int size) {
+<span class="nc" id="L96">        Pageable pageable = PageRequest.of(page, size, Sort.by(&quot;createdAt&quot;).descending());</span>
+<span class="nc" id="L97">        return postRepository.searchByKeyword(keyword, pageable).map(this::toSummary);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;PostDto.Summary&gt; getRecentPosts() {
+<span class="nc" id="L102">        return postRepository.findTop5ByStatusOrderByCreatedAtDesc(PostStatus.PUBLISHED)</span>
+<span class="nc" id="L103">            .stream().map(this::toSummary).toList();</span>
+    }
+
+    // --- Mapping helpers ---
+    private PostDto.Response toResponse(Post post) {
+<span class="fc" id="L108">        return PostDto.Response.builder()</span>
+<span class="fc" id="L109">            .id(post.getId())</span>
+<span class="fc" id="L110">            .title(post.getTitle())</span>
+<span class="fc" id="L111">            .content(post.getContent())</span>
+<span class="fc" id="L112">            .summary(post.getSummary())</span>
+<span class="fc" id="L113">            .author(post.getAuthor())</span>
+<span class="fc" id="L114">            .status(post.getStatus())</span>
+<span class="fc" id="L115">            .createdAt(post.getCreatedAt())</span>
+<span class="fc" id="L116">            .updatedAt(post.getUpdatedAt())</span>
+<span class="pc bpc" id="L117" title="1 of 2 branches missed.">            .categoryName(post.getCategory() != null ? post.getCategory().getName() : null)</span>
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">            .commentCount(post.getComments() != null ? post.getComments().size() : 0)</span>
+<span class="fc" id="L119">            .build();</span>
+    }
+
+    private PostDto.Summary toSummary(Post post) {
+<span class="fc" id="L123">        return PostDto.Summary.builder()</span>
+<span class="fc" id="L124">            .id(post.getId())</span>
+<span class="fc" id="L125">            .title(post.getTitle())</span>
+<span class="fc" id="L126">            .summary(post.getSummary())</span>
+<span class="fc" id="L127">            .author(post.getAuthor())</span>
+<span class="fc" id="L128">            .status(post.getStatus())</span>
+<span class="fc" id="L129">            .createdAt(post.getCreatedAt())</span>
+<span class="pc bpc" id="L130" title="1 of 2 branches missed.">            .categoryName(post.getCategory() != null ? post.getCategory().getName() : null)</span>
+<span class="pc bpc" id="L131" title="1 of 2 branches missed.">            .commentCount(post.getComments() != null ? post.getComments().size() : 0)</span>
+<span class="fc" id="L132">            .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
